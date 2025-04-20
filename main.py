@@ -15,7 +15,11 @@ from fastapi.middleware.cors import CORSMiddleware
 
 
 # Allow requests from your React frontend
-origins = ["https://shl-frontend-delta.vercel.app/"]
+origins = [
+    "https://shl-frontend-delta.vercel.app/",
+    "https://shl-frontend-sanath-kumars-projects-bb34292c.vercel.app/",
+    "https://shl-frontend-git-main-sanath-kumars-projects-bb34292c.vercel.app/"
+]
 
 app.add_middleware(
     CORSMiddleware,
