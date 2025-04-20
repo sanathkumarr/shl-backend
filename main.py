@@ -1,37 +1,31 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
-from fastapi.middleware.cors import CORSMiddleware
-
 from models.model import Embedder
 from utils.recommend import Recommender
+import os
 
-# === FastAPI app config ===
+# Initialize FastAPI app
 app = FastAPI(
     title="SHL Assessment Recommendation API",
     description="RAG-based recommender for SHL product catalog",
     version="1.0.0"
 )
 
-# === CORS settings ===
-origins = [
-    "https://shl-frontend-delta.vercel.app/",
-    "https://shl-frontend-sanath-kumars-projects-bb34292c.vercel.app/",
-    "https://shl-frontend-git-main-sanath-kumars-projects-bb34292c.vercel.app/"
-]
-
+# ✅ Allow all origins for testing (CORS)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],  # Allow all origins
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# === Instantiate recommender (loads precomputed embeddings) ===
+# Instantiate recommender on startup
 recommender = Recommender(csv_path='data/shl_assessments.csv', embedder=Embedder())
 
-# === Request / Response Schemas ===
+# ---- Pydantic schemas ----
 class RecommendRequest(BaseModel):
     query: str
 
@@ -46,12 +40,11 @@ class Assessment(BaseModel):
 class RecommendResponse(BaseModel):
     recommended_assessments: List[Assessment]
 
-# === Health Check ===
+# ---- Endpoints ----
 @app.get("/health")
 def health_check():
     return {"status": "healthy"}
 
-# === Recommendation Endpoint ===
 @app.post("/recommend", response_model=RecommendResponse)
 def recommend(req: RecommendRequest):
     recs = recommender.recommend(req.query, top_k=10)
@@ -59,9 +52,8 @@ def recommend(req: RecommendRequest):
         raise HTTPException(status_code=404, detail="No recommendations found for the given query.")
     return {"recommended_assessments": recs}
 
-# === Run with uvicorn manually for local testing ===
+# ---- Run with dynamic port for Render ----
 if __name__ == "__main__":
     import uvicorn
-    import os
-    port = int(os.environ.get("PORT", 10000))  # use 10000 if PORT not set
-    uvicorn.run("main:app", host="0.0.0.0", port=port)
+    port = int(os.environ.get("PORT", 10000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
