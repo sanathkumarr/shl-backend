@@ -1,20 +1,20 @@
+import os
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
+
 from models.model import Embedder
 from utils.recommend import Recommender
-from typing import Optional
-# Initialize FastAPI app
+
+# ---- Initialize FastAPI app ----
 app = FastAPI(
     title="SHL Assessment Recommendation API",
     description="RAG-based recommender for SHL product catalog",
     version="1.0.0"
 )
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 
-
-# Allow requests from your React frontend
+# ---- CORS configuration ----
 origins = [
     "https://shl-frontend-delta.vercel.app/",
     "https://shl-frontend-sanath-kumars-projects-bb34292c.vercel.app/",
@@ -23,15 +23,13 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,            # Origins allowed
+    allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],              # Allow all methods (GET, POST, etc.)
-    allow_headers=["*"],              # Allow all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-# your existing routes and logic
-
-# Instantiate recommender on startup
+# ---- Instantiate Recommender ----
 recommender = Recommender(csv_path='data/shl_assessments.csv', embedder=Embedder())
 
 # ---- Pydantic schemas ----
@@ -61,6 +59,8 @@ def recommend(req: RecommendRequest):
         raise HTTPException(status_code=404, detail="No recommendations found for the given query.")
     return {"recommended_assessments": recs}
 
+# ---- Entry point for local & Render deployment ----
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    port = int(os.environ.get("PORT", 8000))  # Render uses PORT=10000 by default
+    uvicorn.run(app, host="0.0.0.0", port=port)
