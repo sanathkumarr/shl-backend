@@ -1,20 +1,19 @@
-import os
 from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
+from fastapi.middleware.cors import CORSMiddleware
 
 from models.model import Embedder
 from utils.recommend import Recommender
 
-# ---- Initialize FastAPI app ----
+# === FastAPI app config ===
 app = FastAPI(
     title="SHL Assessment Recommendation API",
     description="RAG-based recommender for SHL product catalog",
     version="1.0.0"
 )
 
-# ---- CORS configuration ----
+# === CORS settings ===
 origins = [
     "https://shl-frontend-delta.vercel.app/",
     "https://shl-frontend-sanath-kumars-projects-bb34292c.vercel.app/",
@@ -29,10 +28,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ---- Instantiate Recommender ----
+# === Instantiate recommender (loads precomputed embeddings) ===
 recommender = Recommender(csv_path='data/shl_assessments.csv', embedder=Embedder())
 
-# ---- Pydantic schemas ----
+# === Request / Response Schemas ===
 class RecommendRequest(BaseModel):
     query: str
 
@@ -47,11 +46,12 @@ class Assessment(BaseModel):
 class RecommendResponse(BaseModel):
     recommended_assessments: List[Assessment]
 
-# ---- Endpoints ----
+# === Health Check ===
 @app.get("/health")
 def health_check():
     return {"status": "healthy"}
 
+# === Recommendation Endpoint ===
 @app.post("/recommend", response_model=RecommendResponse)
 def recommend(req: RecommendRequest):
     recs = recommender.recommend(req.query, top_k=10)
@@ -59,8 +59,9 @@ def recommend(req: RecommendRequest):
         raise HTTPException(status_code=404, detail="No recommendations found for the given query.")
     return {"recommended_assessments": recs}
 
-# ---- Entry point for local & Render deployment ----
+# === Run with uvicorn manually for local testing ===
 if __name__ == "__main__":
     import uvicorn
-    port = int(os.environ.get("PORT", 8000))  # Render uses PORT=10000 by default
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    import os
+    port = int(os.environ.get("PORT", 10000))  # use 10000 if PORT not set
+    uvicorn.run("main:app", host="0.0.0.0", port=port)
