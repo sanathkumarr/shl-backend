@@ -1,6 +1,6 @@
 fastapi
-uvicorn
+uvicorn         # dev only; Vercel’s runtime will use ASGI directly
 pandas
-sentence-transformers
-scikit-learn
 numpy
+scikit-learn
+sentence-transformers
